@@ -1,6 +1,6 @@
 import torch
 import qadence
-from qadence import FeatureParameter, VariationalParameter, RX, Z, QuantumModel,
+from qadence import FeatureParameter, VariationalParameter, RX, Z, QuantumModel
 from qadence import QuantumCircuit, kron, chain
 import matplotlib.pyplot as plt
 import numpy as np
