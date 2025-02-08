@@ -1,7 +1,24 @@
 *** Part 1 ***
 
+> A
+ 
+
+> B
+We started with two qubits, one encodes sin(x + phi) while the other encodes sin(2x+phi). 
+The predition presented the expected shape with shifted amplitudes. 
+So one adds a constants C to the observable to get good prediction.
+Consequently, the expected values of phi1 and phi2.
+
+> C
+In this case one need to change the feature map to 2*x.
 
 *** Part 2 ***
+> A
+Similar to 1C, but instead of one value C one need two values. 
+
+> B
+
+> C
 
 *** Part 3 ***
 
