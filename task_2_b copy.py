@@ -28,21 +28,22 @@ def vqc_fit(n_qubits, n_epochs):
     model = QuantumModel(circuit, observable = obs)
 
     criterion = torch.nn.MSELoss()
-    x0 = [np.random.uniform(0, 3) for i in range(4)]
+    optimizer = torch.optim.Adam(model.parameters(), lr = 0.1)
 
-    res = minimize(loss_fn, x0 = x0, args = (x_train, y_train, model, criterion), method='Powell')
-    model.reset_vparams(res.x)
-
-    y_pred = model.expectation({"x": x_train}).squeeze().detach()
+    n_epochs = 500
+    for epoch in range(n_epochs):
+        optimizer.zero_grad()
+        loss = loss_fn(x_train, y_train, model, criterion)
+        loss.backward()
+        optimizer.step()
+        y_pred = model.expectation({"x": x_train}).squeeze().detach()
 
     return model, y_pred
 
-def loss_fn(params, *args):
-    x_train, y_train, model, criterion = args
-    model.reset_vparams(torch.tensor(params))
+def loss_fn(x_train, y_train, model, criterion):
     output = model.expectation({"x": x_train}).squeeze()
     loss = criterion(output, y_train)
-    return loss.detach()
+    return loss
 
 def data_from_file(path):
     with open(path, "r") as file:

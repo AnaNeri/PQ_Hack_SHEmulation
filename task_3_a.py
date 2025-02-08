@@ -22,7 +22,7 @@ def vqc_fit(n_qubits, n_epochs):
     C = VariationalParameter("C")
     
     block = chain(RX(0, np.sqrt(k) * t + phi))
-    obs = C * Z(0)
+    obs = C*np.exp(-d*t/2) * Z(0)
         
     circuit = QuantumCircuit(1, block)
     model = QuantumModel(circuit, observable = obs)
@@ -49,6 +49,7 @@ def loss_fn(model, t_range, x0, dx0, k):
     x_t = model.expectation({"t": t_range}).squeeze()
     
     # dx/dt
+    print(x_t)
     dx_dt = torch.autograd.grad(x_t.sum(), t_range, create_graph=True)[0]
     
     # d^2x/dt^2
