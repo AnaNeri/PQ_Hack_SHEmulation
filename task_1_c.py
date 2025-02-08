@@ -9,7 +9,7 @@ import torch
 def vqc_fit(n_qubits, n_epochs):
     fm = feature_map(n_qubits, param = "x")
     x = FeatureParameter("x")
-    fm = RX(0, x) @ RX(1, 2*x)
+    fm = RX(0, 8*x) @ RX(1, 16*x)
 
     thetas = [VariationalParameter(f"theta{i}") for i in range(n_qubits)]
     ansatz = RX(0, thetas[0])*RX(1, thetas[1])
@@ -55,7 +55,7 @@ def plot(x_train, y_train, y_pred):
 
 def scipy_verification(x_data, y_data):
     def model(x, phi1, phi2, B):
-        return 0.5*(np.sin(x + phi1) + np.sin(2*x + phi2)) + B
+        return 0.5*(np.sin(8*x + phi1) + np.sin(16*x + phi2)) + B
     
     params, covariance = curve_fit(model, x_data, y_data, p0=[2, 0, 1])  
     A_fitted, phi_fitted, B_fitted = params
@@ -68,8 +68,8 @@ def scipy_verification(x_data, y_data):
     plt.show()
 
 quantum = True
-show = False
-x_train, y_train = data_from_file("datasets/dataset_1_b.txt")
+show = True
+x_train, y_train = data_from_file("datasets/dataset_1_c.txt")
 
 if quantum: 
     n_qubits = 2

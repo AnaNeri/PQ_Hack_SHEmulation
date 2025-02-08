@@ -1,52 +1,45 @@
 from qadence import (feature_map, hea, Z, QuantumModel, add, QuantumCircuit, 
                      kron, FeatureParameter, RX, RZ, VariationalParameter, RY,
-                     chain, CNOT, X, Y)
+                     chain, CNOT, X, Y, CRX, CRZ, I)
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 import torch
 
 def vqc_fit(n_qubits, n_epochs, aops = 2):
-    fm = feature_map(n_qubits, param = "x")
+    n_qubits = 1
     x = FeatureParameter("x")
-    fm = RX(0, 8*x) @ RX(1, 16*x)
+    f = VariationalParameter("f")
+   
+    fm =  RX(0, f*x) 
 
-    if n_qubits == 1:
-        assert aops in [1, 2, 3]
-        # aops is the number of rotations to use in the ansatz.
-        # 1 seems to be enough; the fit parameter is then the phi we want.
-        thetas = [VariationalParameter(f"theta{i}") for i in range(aops)]
-        RS = [RX, RY, RZ]
-        RS = RS[:aops]
-        ansatz = chain(R(0, theta) for R, theta in zip(RS, thetas))
-    elif n_qubits ==2: 
-        thetas = [VariationalParameter(f"theta{i}") for i in range(3)]
-        ansatz = RX(0, thetas[0])*RX(1, thetas[1])
-    else:
-        ansatz = hea(n_qubits, depth = 2)
+    theta = VariationalParameter("phi")
+    ansatz =   RX(0, theta) 
 
-    obs = add(Z(i) for i in range(n_qubits))*thetas[2]
+    # As = [VariationalParameter(f"A1"), VariationalParameter(f"A2")]
+    # obs = add(As[i]*Z(i) for i in range(n_qubits))
+    obs = VariationalParameter("A")*Z(0) + VariationalParameter("B")*I(0)
     block = fm * ansatz
 
     circuit = QuantumCircuit(n_qubits, block)
     model = QuantumModel(circuit, observable = obs)
 
     criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr = 0.1)
+    x0 = [1, 1, 1, 1]
 
-    for epoch in range(n_epochs):
-        optimizer.zero_grad()
-        loss = loss_fn(x_train, y_train, model, criterion)
-        loss.backward()
-        optimizer.step()
-        y_pred = model.expectation({"x": x_train}).squeeze().detach()
+    res = minimize(loss_fn, x0 = x0, args = (x_train, y_train, model, criterion), method='Powell')
+    model.reset_vparams(res.x)
+
+    y_pred = model.expectation({"x": x_train}).squeeze().detach()
 
     return model, y_pred
 
-def loss_fn(x_train, y_train, model, criterion):
+def loss_fn(params, *args):
+    x_train, y_train, model, criterion = args
+    model.reset_vparams(torch.tensor(params))
     output = model.expectation({"x": x_train}).squeeze()
     loss = criterion(output, y_train)
-    return loss
+    return loss.detach()
 
 def data_from_file(path):
     with open(path, "r") as file:
@@ -65,12 +58,12 @@ def plot(x_train, y_train, y_pred):
     plt.show()
 
 def scipy_verification(x_data, y_data):
-    def model(x, phi1, phi2, B):
-        return 0.5*(np.sin(x + phi1) + np.sin(2*x + phi2)) + B
+    def model(x, A, f, phi, B):
+        return A*np.cos(f*x + phi) + B
     
-    params, covariance = curve_fit(model, x_data, y_data, p0=[2, 0, 1])  
-    A_fitted, phi_fitted, B_fitted = params
-    print(f"Fitted Parameters: phi1 = {A_fitted}, phi2 = {phi_fitted}, B = {B_fitted}")
+    params, covariance = curve_fit(model, x_data, y_data, p0=[3, 3, 3, 3])  
+    Ae, fe, phie, Be = params
+    print(f"Fitted Parameters: {Ae = }, {fe = }, {phie = }, {Be =}")
     plt.scatter(x_data, y_data, label="Data", color='red')
     plt.plot(x_data, model(x_data, *params), label="Fitted model", color='blue')
     plt.xlabel("x")
@@ -80,7 +73,7 @@ def scipy_verification(x_data, y_data):
 
 quantum = True
 show = True
-x_train, y_train = data_from_file("datasets/dataset_1_c.txt")
+x_train, y_train = data_from_file("datasets/dataset_2_b.txt")
 
 if quantum: 
     n_qubits = 2
@@ -88,6 +81,7 @@ if quantum:
     if show:
         plot(x_train, y_train, y_pred)
     vparams = model.vparams
-    print(vparams)
+    for p in ['phi', 'f', 'A', 'B']:
+        print(p, vparams[p].item()+2*np.pi if p=='phi' else vparams[p].item())
 else: 
     scipy_verification(x_train, y_train)
