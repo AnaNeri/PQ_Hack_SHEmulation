@@ -74,18 +74,12 @@ def scipy_verification(x_data, y_data):
     plt.legend()
     plt.show()
 
-quantum = True
 plot = False
 x_train, y_train = data_from_file("datasets/dataset_1_a.txt")
 
-if quantum: 
-    n_qubits = 1
-    model, y_pred = vqc_fit(n_qubits, n_epochs = 100, aops = 1)
-    if plot:
-        plot(x_train, y_train, y_pred)
-    vparams = model.vparams
-    print(vparams['theta0'].item())
-else: 
-    scipy_verification(x_train, y_train)
-
-print()
+n_qubits = 1
+model, y_pred = vqc_fit(n_qubits, n_epochs = 100, aops = 1)
+if plot:
+    plot(x_train, y_train, y_pred)
+vparams = model.vparams
+print(vparams['theta0'].item())
