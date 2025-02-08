@@ -7,28 +7,35 @@ from scipy.optimize import curve_fit, minimize
 import torch
 
 torch.manual_seed(55)
-np.random.seed(55)
 
 def vqc_fit(n_qubits, n_epochs):
-    n_qubits = 1
+    n_qubits = 3
     x = FeatureParameter("x")
-    f = VariationalParameter("f")
+    A1 = VariationalParameter("A1")
+    A2 = VariationalParameter("A2")
+    A3 = VariationalParameter("A3")
+    f1 = VariationalParameter("f1")
+    f2 = VariationalParameter("f2")
+    f3 = VariationalParameter("f3")
+    phi1 = VariationalParameter("phi1")
+    phi2 = VariationalParameter("phi2")
+    phi3 = VariationalParameter("phi3")
+    B = VariationalParameter("B")
    
-    fm =  RX(0, f*x) 
+    fm =  RX(0, f1*x) @ RX(1, f2*x) @ RX(2, f3*x)
 
     theta = VariationalParameter("phi")
-    ansatz =   RX(0, theta) 
+    ansatz =   RX(0, phi1) * RX(1, phi2) * RX(2, phi3)
 
-    # As = [VariationalParameter(f"A1"), VariationalParameter(f"A2")]
-    # obs = add(As[i]*Z(i) for i in range(n_qubits))
-    obs = VariationalParameter("A")*Z(0) + VariationalParameter("B")*I(0)
+    As = [A1, A2, A3]
+    obs = add(As[i]*Z(i) for i in range(n_qubits)) + VariationalParameter("B")*I(0)
     block = fm * ansatz
 
     circuit = QuantumCircuit(n_qubits, block)
     model = QuantumModel(circuit, observable = obs)
 
     criterion = torch.nn.MSELoss()
-    x0 = [np.random.uniform(0, 3) for i in range(4)]
+    x0 = [0.5 for i in range(10)]
 
     res = minimize(loss_fn, x0 = x0, args = (x_train, y_train, model, criterion), method='Powell')
     model.reset_vparams(res.x)
@@ -61,12 +68,15 @@ def plot(x_train, y_train, y_pred):
     plt.show()
 
 def scipy_verification(x_data, y_data):
-    def model(x, A, f, phi, B):
-        return A*np.cos(f*x + phi) + B
+    def model(x, A1, f1, phi1, A2, f2, phi2, A3, f3, phi3, B):
+        
+        return A1*np.cos(f1*x + phi1) + A2*np.cos(f2*x + phi2) + A3*np.cos(f3*x + phi3) + B
     
-    params, covariance = curve_fit(model, x_data, y_data, p0=[3, 3, 3, 3])  
-    Ae, fe, phie, Be = params
-    print(f"Fitted Parameters: {Ae = }, {fe = }, {phie = }, {Be =}")
+    params, covariance = curve_fit(model, x_data, y_data, p0=[3, 1, 1, 1, 3, 1, 3, 3, 3, 3])  
+    A1, f1, phi1, A2, f2, phi2, A3, f3, phi3, B = params
+    param_str = ["A1", "f1", "phi1", "A2", "f2", "phi2", "A3", "f3", "phi3", "B"]
+    for param, str in zip(params, param_str):
+        print(str, param)
     plt.scatter(x_data, y_data, label="Data", color='red')
     plt.plot(x_data, model(x_data, *params), label="Fitted model", color='blue')
     plt.xlabel("x")
@@ -76,7 +86,7 @@ def scipy_verification(x_data, y_data):
 
 quantum = True
 show = True
-x_train, y_train = data_from_file("datasets/dataset_2_b.txt")
+x_train, y_train = data_from_file("datasets/dataset_2_c.txt")
 
 if quantum: 
     n_qubits = 2
@@ -84,7 +94,7 @@ if quantum:
     if show:
         plot(x_train, y_train, y_pred)
     vparams = model.vparams
-    for p in ['phi', 'f', 'A', 'B']:
+    for p in ["A1", "f1", "phi1", "A2", "f2", "phi2", "A3", "f3", "phi3", "B"]:
         print(p, vparams[p].item()+2*np.pi if p=='phi' else vparams[p].item())
 else: 
     scipy_verification(x_train, y_train)
