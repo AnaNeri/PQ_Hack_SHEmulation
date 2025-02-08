@@ -6,6 +6,9 @@ import numpy as np
 from scipy.optimize import curve_fit, minimize
 import torch
 
+seed = 55
+torch.manual_seed(seed)
+
 #Constant and boundary conditions
 k = 2.3
 x0 = 1.0  # x(0) = 1.0
@@ -14,11 +17,10 @@ dx0 = 1.2  # x'(0) = 1.2
 def vqc_fit(n_qubits, n_epochs):
     
     t = FeatureParameter("t")
-    omega = VariationalParameter("omega")
     phi = VariationalParameter("phi")
     C = VariationalParameter("C")
     
-    block = chain(RX(0, omega * t + phi))
+    block = chain(RX(0, np.sqrt(k) * t + phi))
     obs = C * Z(0)
         
     circuit = QuantumCircuit(1, block)
@@ -52,7 +54,7 @@ def loss_fn(model, t_range, x0, dx0, k):
     d2x_dt2 = torch.autograd.grad(dx_dt.sum(), t_range, create_graph=True)[0]
     
     # Check if learned derivative is behaving according to diff eq.
-    residual = d2x_dt2 + k**2 * x_t
+    residual = d2x_dt2 + k * x_t
     
     # Enforce boundary conditions
     bc1 = x_t[0] - x0  # x(0) = 1.0
@@ -64,7 +66,9 @@ def loss_fn(model, t_range, x0, dx0, k):
 
 def plot(t_range, y_pred):
     plt.plot(t_range.detach().numpy(), y_pred, label = "Prediction")
-    plt.xlabel("x")
+    #compare with what is expected
+    #plt.plot(t_range.detach().numpy(), 1.27*np.cos(np.sqrt(k)*t_range.detach().numpy()-0.657))
+    plt.xlabel("t")
     plt.ylabel("x(t)")
     plt.legend()
     plt.show()
