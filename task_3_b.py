@@ -70,12 +70,10 @@ def plot(t_range, y_pred):
     plt.legend()
     plt.show()
 
-quantum = True
 show = True
 
-if quantum: 
-    n_qubits = 1
-    model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
-    if show:
-        plot(t_range, y_pred)
-    vparams = model.vparams
+n_qubits = 1
+model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
+if show:
+    plot(t_range, y_pred)
+vparams = model.vparams
