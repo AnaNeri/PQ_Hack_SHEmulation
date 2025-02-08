@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit, minimize
 import torch
+import csv
 
 seed = 55
 torch.manual_seed(seed)
@@ -79,4 +80,16 @@ n_qubits = 1
 model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
 if show:
     plot(t_range, y_pred)
+
+res = zip(t_range.detach().numpy(), y_pred.detach().numpy())
 vparams = model.vparams
+
+def write_csv(data, filename):
+    with open(filename, mode='w') as file:
+        writer = csv.writer(file)
+        for row in data:
+            writer.writerow(row)
+
+file = "solution_3_a.csv"
+    
+write_csv(res,file)
