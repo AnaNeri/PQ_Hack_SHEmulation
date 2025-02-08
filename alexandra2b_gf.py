@@ -3,45 +3,44 @@ from qadence import (feature_map, hea, Z, QuantumModel, add, QuantumCircuit,
                      chain, CNOT, X, Y, CRX, CRZ)
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 import torch
 
 def vqc_fit(n_qubits, n_epochs, aops = 2):
     n_qubits = 2
-    fm = feature_map(n_qubits, param = "x")
+    # fm = feature_map(n_qubits, param = "x")
     x = FeatureParameter("x")
     f = VariationalParameter("f")
-
    
-    fm =  RX(0, x) @ RX(1, f)
+    fm =  RX(0, f*x) 
 
-    theta = VariationalParameter("theta")
-    ansatz =   RX(0, theta) * RX(1, theta) * CRX(1, 0, f*x) #* CRX(1, 0, f*x) # CRZ(1, 0, f*x) * RX(0, theta) 
+    theta = VariationalParameter("phi")
+    ansatz =   RX(0, theta) 
 
-    As = [VariationalParameter(f"A{i}") for i in range(n_qubits)]
+    As = [VariationalParameter(f"A0"), VariationalParameter(f"A1")]
     obs = add(As[i]*Z(i) for i in range(n_qubits))
+    # obs = A*Z(0)
     block = fm * ansatz
 
     circuit = QuantumCircuit(n_qubits, block)
     model = QuantumModel(circuit, observable = obs)
 
     criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr = 0.01)
+    x0 = [1, 1, 1, 1]
 
-    n_epochs = 500
-    for epoch in range(n_epochs):
-        optimizer.zero_grad()
-        loss = loss_fn(x_train, y_train, model, criterion)
-        loss.backward()
-        optimizer.step()
-        y_pred = model.expectation({"x": x_train}).squeeze().detach()
+    res = minimize(loss_fn, x0 = x0, args = (x_train, y_train, model, criterion), method='Powell')
+    model.reset_vparams(res.x)
+
+    y_pred = model.expectation({"x": x_train}).squeeze().detach()
 
     return model, y_pred
 
-def loss_fn(x_train, y_train, model, criterion):
+def loss_fn(params, *args):
+    x_train, y_train, model, criterion = args
+    model.reset_vparams(torch.tensor(params))
     output = model.expectation({"x": x_train}).squeeze()
     loss = criterion(output, y_train)
-    return loss
+    return loss.detach()
 
 def data_from_file(path):
     with open(path, "r") as file:
@@ -83,7 +82,7 @@ if quantum:
     if show:
         plot(x_train, y_train, y_pred)
     vparams = model.vparams
-    for p in ['theta', 'f', 'A0', 'A1']:
+    for p in ['phi', 'f', 'A0', 'A1']:
         print(vparams[p].item()+np.pi/2 if p[:5]=='theta' else vparams[p].item())
 else: 
     scipy_verification(x_train, y_train)
