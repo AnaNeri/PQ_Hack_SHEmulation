@@ -6,6 +6,7 @@ import numpy as np
 from scipy.optimize import curve_fit, minimize
 import torch
 from sympy import exp
+import csv
 
 #Constant and boundary conditions
 k = 3.3
@@ -63,6 +64,12 @@ def loss_fn(model, t_range, x0, dx0, k, d):
     loss = torch.mean(residual**2) + bc1**2 + bc2**2
     return loss
 
+def write_csv(xx, yy, filename):
+    with open(filename, mode="w", newline="") as file:
+        writer = csv.writer(file)
+        for x, y in zip(xx, yy):
+            writer.writerow([x.item(), y.item()])
+
 def plot(t_range, y_pred):
     plt.plot(t_range.detach().numpy(), y_pred, label = "Prediction")
     plt.xlabel("t")
@@ -70,10 +77,19 @@ def plot(t_range, y_pred):
     plt.legend()
     plt.show()
 
+def data_from_file(path):
+    with open(path, "r") as file:
+        xs = [float(line) for line in file]
+    xs = torch.Tensor(xs)
+    return xs
+
 show = True
 
 n_qubits = 1
 model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
 if show:
     plot(t_range, y_pred)
-vparams = model.vparams
+
+ts = data_from_file("datasets/dataset_3_test.txt")
+ypred = model.expectation(values = {"t": ts})
+write_csv(ts.detach(), ypred.detach(), "solution_3_b.csv")
