@@ -1,26 +1,20 @@
 from qadence import (feature_map, hea, Z, QuantumModel, add, QuantumCircuit, 
                      kron, FeatureParameter, RX, RZ, VariationalParameter, RY,
-                     chain)
+                     chain, CNOT, X, Y)
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
 import torch
 
-def vqc_fit(n_qubits, n_epochs, aops = 2):
+def vqc_fit(n_qubits, n_epochs):
     fm = feature_map(n_qubits, param = "x")
     x = FeatureParameter("x")
-    fm = kron(RX(0, x))
+    fm = RX(0, 8*x) @ RX(1, 16*x)
 
-    if n_qubits == 1:
-        assert aops in [1, 2, 3]
-        # aops is the number of rotations to use in the ansatz.
-        # 1 seems to be enough; the fit parameter is then the phi we want.
-        theta = VariationalParameter(f"theta")
-        ansatz = RX(0, theta)
-    else:
-        ansatz = hea(n_qubits, depth = 2)
+    thetas = [VariationalParameter(f"theta{i}") for i in range(n_qubits)]
+    ansatz = RX(0, thetas[0])*RX(1, thetas[1])
 
-    obs = add(Z(i) for i in range(n_qubits))
+    obs = add(Z(i) for i in range(n_qubits))*VariationalParameter("C")
     block = fm * ansatz
 
     circuit = QuantumCircuit(n_qubits, block)
@@ -60,11 +54,12 @@ def plot(x_train, y_train, y_pred):
     plt.show()
 
 def scipy_verification(x_data, y_data):
-    def model(x, A, phi, B):
-        return A * np.cos(x + phi) + B
+    def model(x, phi1, phi2, B):
+        return 0.5*(np.sin(8*x + phi1) + np.sin(16*x + phi2)) + B
+    
     params, covariance = curve_fit(model, x_data, y_data, p0=[2, 0, 1])  
     A_fitted, phi_fitted, B_fitted = params
-    print(f"Fitted Parameters: A = {A_fitted}, phi = {phi_fitted}, B = {B_fitted}")
+    print(f"Fitted Parameters: phi1 = {A_fitted}, phi2 = {phi_fitted}, B = {B_fitted}")
     plt.scatter(x_data, y_data, label="Data", color='red')
     plt.plot(x_data, model(x_data, *params), label="Fitted model", color='blue')
     plt.xlabel("x")
@@ -72,12 +67,16 @@ def scipy_verification(x_data, y_data):
     plt.legend()
     plt.show()
 
-show = False
-x_train, y_train = data_from_file("datasets/dataset_1_a.txt")
+quantum = True
+show = True
+x_train, y_train = data_from_file("datasets/dataset_1_c.txt")
 
-n_qubits = 1
-model, y_pred = vqc_fit(n_qubits, n_epochs = 100, aops = 1)
-if show:
-    plot(x_train, y_train, y_pred)
-vparams = model.vparams
-print(vparams['theta'].item())
+if quantum: 
+    n_qubits = 2
+    model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
+    if show:
+        plot(x_train, y_train, y_pred)
+    vparams = model.vparams
+    print(vparams['theta0'].item()+np.pi/2, vparams['theta1'].item()+np.pi/2)
+else: 
+    scipy_verification(x_train, y_train)
