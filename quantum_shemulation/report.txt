@@ -35,7 +35,7 @@ In this case, we don't have training data, so we need to enforce the behaviour o
 
 > B
 
-Similar to the previous one, we obtained a curve very close to the expected behaviour. However, the equilibrium position of the oscillator is not zero as expected, and x(0) is not 1.0. We added a shift term in the observable to help converge and enforce the boundary conditions. We tried several ansatz with two qubits using different combinations of rotations and entangling gates, but none performed better than the 1 qubit solution we found, so we opted for it since it was faster and simpler.
+Similar to the previous one, we obtained a curve very close to the expected behaviour. However, the equilibrium position of the oscillator is not zero as expected, and x(0) is not 1.0. We added a shift term in the observable to help converge and enforce the boundary conditions. We tried several ansatz with two qubits using different combinations of rotations and entangling gates, including some with entangling gates and inspired in the amplitude damping Kraus operators. However, none performed better than the 1 qubit solution we found, so we opted for it since it was faster and simpler. This may be to peculiarities of the optimization landscape, as we found the predictive power to be sensitive to changes of optimizer parameters.
 
 
 *** Part 4 ***
@@ -43,3 +43,5 @@ Similar to the previous one, we obtained a curve very close to the expected beha
 This time, we have two feature variables. We tried some combination of rotations on two qubits. We didn't find the expected solution (of the form sin(omega1x)sin(omega2y)), probably because of the poor choice of Ansatz that did not offer the required flexibility.
 
 *** Part 5 ***
+
+We used the PSR with angle np.pi/8 because it was the one that best reproduced exact gradient calculations. We introduced shot noise. Due to shot noise and noise in the PSR derivative calculations, the optimizer struggles to converge. We defined a threshold for the loss as a termination criterion. 
