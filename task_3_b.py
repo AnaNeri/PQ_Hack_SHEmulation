@@ -12,7 +12,6 @@ import random
 
 rand_int = random.randint(0, 200)
 rand_int = 198
-print(rand_int)
 seed = rand_int
 torch.manual_seed(seed)
 np.random.seed(rand_int)
@@ -48,18 +47,18 @@ def vqc_fit():
 
     criterion = torch.nn.MSELoss()
     # optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3)
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=5e-4, momentum=0.9)
     # optimizer = torch.optim.RMSprop(model.parameters(), lr=0.01, alpha=0.99, eps=1e-8)
     # optimizer = torch.optim.Adagrad(model.parameters(), lr=0.001)
     # optimizer = torch.optim.Adadelta(model.parameters(), rho=0.5)
-
-    n_epochs = 500
+    n_epochs = 1000
     for epoch in range(n_epochs):
         optimizer.zero_grad()
         loss = loss_fn(model, t_range, x0, dx0, k, d)
         loss.backward()
         optimizer.step()
-        y_pred = model.expectation({"t": t_range}).squeeze().detach()
+    
+    y_pred = model.expectation({"t": t_range}).squeeze().detach()
 
     return model, y_pred
     

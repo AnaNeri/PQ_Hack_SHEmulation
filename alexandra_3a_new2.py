@@ -9,6 +9,7 @@ import csv
 
 seed = 55
 torch.manual_seed(seed)
+np.random.seed(55)
 
 #Constant and boundary conditions
 k = 2.3
