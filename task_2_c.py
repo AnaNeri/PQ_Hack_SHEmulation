@@ -107,8 +107,6 @@ xnew, ynew = data_from_file("datasets/dataset_2_c_test.txt")
 if quantum: 
     n_qubits = 2
     model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
-    if show:
-        plot(x_train, y_train, y_pred)
     vparams = model.vparams
     #for p in ["A1", "f1", "phi1", "A2", "f2", "phi2", "A3", "f3", "phi3", "B"]:
     #    print(p, vparams[p].item()+2*np.pi if p=='phi' else vparams[p].item())

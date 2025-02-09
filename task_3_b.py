@@ -39,7 +39,7 @@ def vqc_fit():
     g = VariationalParameter("g")
     theta = VariationalParameter("theta")
     
-    block = chain(RX(0, B0 * t+phi1)*RY(0, B1 * t+phi2)*RZ(0, B1 * t+phi3))
+    block = chain(RX(0, B0 * t+phi1)*RY(0, B1 * t+phi2)*RZ(0, B2 * t+phi3))
     obs = C*Z(0)+g*I(0)
         
     circuit = QuantumCircuit(n_qubits, block)
