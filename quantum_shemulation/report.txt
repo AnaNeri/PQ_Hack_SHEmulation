@@ -1,0 +1,43 @@
+*** Part 1 ***
+
+> A
+
+In this simple case, a feature map RX(x) followed by ansatz RX(phi) on a single qubit, and computation of the expectation value of observable Z, results in the adequate parametrized function ftheta(x). The variational parameter phi learned by the model is the value we are looking for, and is printed by the script.
+ 
+
+> B
+
+Generalizing from the previous task, we can use two qubits and apply the feature map RX(0,x) @ RX(0,2x) on each qubit, and ansatz RX(0,phi1) @ RX(1,phi2), while measuring the observable (Z(0)+Z(1))*C. Variational parameters phi1 and phi2 give us the desired parameters, and C adjust the overall amplitude to enable convergence. Note that the values of phi1 and phi2 need to be shifted by pi/2, since the learned function is a sum of cosines, but the target is a sum of sines.
+
+
+> C
+Doing the same optimization as in B, but simply changing the feature map to RX(0,8x) @ RX(0,16x), yields phi1, phi2
+
+
+*** Part 2 ***
+> A
+
+Again generalizing from the previous tasks, we just need to add an additional degree of flexibility in the model by using the observable A1*Z(0)+A2*Z(1).
+
+> B
+
+We can add the frequency f in the feature map as a variational parameter. We opted to choose the gradient-free optimization with Scipy.
+
+> C
+
+We generalize the previous answer, introducing 3 amplitudes, frequencies and phase shifts. We again use gradient-free optimization. With the parameters learned by the model, we produce the prediction from the x test data in dataset_2_c_test. Those are the predicted points in red. In dataset_2_c_test, there are pairs of (x,y) values. We plot them in blue for comparison.
+
+*** Part 3 ***
+
+> A
+
+In this case, we don't have training data, so we need to enforce the behaviour of the differential equation and the boundary conditions in the loss function. As an ansatz we used a product of RX, RY, RZ rotations on one qubit, which model the oscillatory behaviour. We introduce for each a variational phase shift and frequency, and an overall amplitude. We implement Stochastic Gradient Descent optimization.
+
+> B
+
+Similar to the previous one, we obtained a curve very close to the expected behaviour. However, the equilibrium position of the oscillator is not zero as expected, and x(0) is not 1.0. We added a shift term in the observable to help converge and enforce the boundary conditions. We tried several ansatz with two qubits using different combinations of rotations and entangling gates, but none performed better than the 1 qubit solution we found, so we opted for it since it was faster and simpler.
+
+
+*** Part 4 ***
+
+*** Part 5 ***
