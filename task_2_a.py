@@ -1,6 +1,6 @@
 from qadence import (feature_map, hea, Z, QuantumModel, add, QuantumCircuit, 
                      kron, FeatureParameter, RX, RZ, VariationalParameter, RY,
-                     chain, CNOT, X, Y)
+                     chain)
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
@@ -9,12 +9,15 @@ import torch
 def vqc_fit(n_qubits, n_epochs):
     fm = feature_map(n_qubits, param = "x")
     x = FeatureParameter("x")
-    fm = RX(0, 8*x) @ RX(1, 16*x)
+    fm = kron(RX(i, (i+1)*x) for i in range(n_qubits))
 
-    thetas = [VariationalParameter(f"theta{i}") for i in range(n_qubits)]
-    ansatz = RX(0, thetas[0])*RX(1, thetas[1])
+    theta1 = VariationalParameter("theta1")
+    theta2 = VariationalParameter("theta2")
+    A1 = VariationalParameter("A1")
+    A2 = VariationalParameter("A2")
+    ansatz = chain(RX(0, theta1), RX(1,theta2))
 
-    obs = add(Z(i) for i in range(n_qubits))*VariationalParameter("C")
+    obs = (A1*Z(0) + A2*Z(1))
     block = fm * ansatz
 
     circuit = QuantumCircuit(n_qubits, block)
@@ -53,30 +56,13 @@ def plot(x_train, y_train, y_pred):
     plt.legend()
     plt.show()
 
-def scipy_verification(x_data, y_data):
-    def model(x, phi1, phi2, B):
-        return 0.5*(np.sin(8*x + phi1) + np.sin(16*x + phi2)) + B
-    
-    params, covariance = curve_fit(model, x_data, y_data, p0=[2, 0, 1])  
-    A_fitted, phi_fitted, B_fitted = params
-    print(f"Fitted Parameters: phi1 = {A_fitted}, phi2 = {phi_fitted}, B = {B_fitted}")
-    plt.scatter(x_data, y_data, label="Data", color='red')
-    plt.plot(x_data, model(x_data, *params), label="Fitted model", color='blue')
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.legend()
-    plt.show()
+x_train, y_train = data_from_file("datasets/dataset_2_a.txt")
 
-quantum = True
-show = True
-x_train, y_train = data_from_file("datasets/dataset_1_c.txt")
-
-if quantum: 
-    n_qubits = 2
-    model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
-    if show:
-        plot(x_train, y_train, y_pred)
-    vparams = model.vparams
-    print('phi1',vparams['theta0'].item()+np.pi/2, 'phi2',vparams['theta1'].item()+np.pi/2)
-else: 
-    scipy_verification(x_train, y_train)
+n_qubits = 2
+model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
+#plot(x_train, y_train, y_pred)
+vparams = model.vparams
+print('theta1', vparams['theta1'].item())
+print('theta2', vparams['theta2'].item())
+print('A1', vparams['A1'].item())
+print('A2',vparams['A2'].item())
