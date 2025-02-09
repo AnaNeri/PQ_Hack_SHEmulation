@@ -57,6 +57,8 @@ def vqc_fit():
         loss = loss_fn(model, t_range, x0, dx0, k, d)
         loss.backward()
         optimizer.step()
+
+    print(loss)
     
     y_pred = model.expectation({"t": t_range}).squeeze().detach()
 

@@ -77,6 +77,6 @@ if quantum:
     if show:
         plot(x_train, y_train, y_pred)
     vparams = model.vparams
-    print(vparams['theta0'].item()+np.pi/2, vparams['theta1'].item()+np.pi/2)
+    print('phi1', vparams['theta0'].item()+np.pi/2, 'phi2', vparams['theta1'].item()+np.pi/2)
 else: 
     scipy_verification(x_train, y_train)

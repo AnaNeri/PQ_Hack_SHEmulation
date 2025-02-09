@@ -36,6 +36,7 @@ def vqc_fit(n_qubits, n_epochs):
         optimizer.step()
         y_pred = model.expectation({"t": t_range}).squeeze().detach()
 
+    print(loss)
     return model, y_pred
     
 #Once again, we need to adapt the loss function to enforce the diff. eq.
