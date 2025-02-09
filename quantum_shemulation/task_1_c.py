@@ -68,7 +68,7 @@ def scipy_verification(x_data, y_data):
     plt.show()
 
 quantum = True
-show = True
+show = False
 x_train, y_train = data_from_file("datasets/dataset_1_c.txt")
 
 if quantum: 

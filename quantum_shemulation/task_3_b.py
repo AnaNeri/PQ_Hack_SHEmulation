@@ -10,7 +10,7 @@ from sympy import exp
 import csv
 import random
 
-rand_int = random.randint(0, 200)
+# rand_int = random.randint(0, 200)
 rand_int = 198
 seed = rand_int
 torch.manual_seed(seed)
