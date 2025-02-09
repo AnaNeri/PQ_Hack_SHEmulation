@@ -6,21 +6,15 @@ import numpy as np
 from scipy.optimize import curve_fit
 import torch
 
-def vqc_fit(n_qubits, n_epochs, aops = 2):
+def vqc_fit(n_qubits, n_epochs):
     fm = feature_map(n_qubits, param = "x")
     x = FeatureParameter("x")
     fm = kron(RX(0, x))
 
-    if n_qubits == 1:
-        assert aops in [1, 2, 3]
-        # aops is the number of rotations to use in the ansatz.
-        # 1 seems to be enough; the fit parameter is then the phi we want.
-        theta = VariationalParameter(f"theta")
-        ansatz = RX(0, theta)
-    else:
-        ansatz = hea(n_qubits, depth = 2)
+    theta = VariationalParameter(f"theta")
+    ansatz = RX(0, theta)
 
-    obs = add(Z(i) for i in range(n_qubits))
+    obs = Z(0)
     block = fm * ansatz
 
     circuit = QuantumCircuit(n_qubits, block)
@@ -74,9 +68,8 @@ def scipy_verification(x_data, y_data):
 
 show = False
 x_train, y_train = data_from_file("datasets/dataset_1_a.txt")
-
 n_qubits = 1
-model, y_pred = vqc_fit(n_qubits, n_epochs = 100, aops = 1)
+model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
 if show:
     plot(x_train, y_train, y_pred)
 vparams = model.vparams

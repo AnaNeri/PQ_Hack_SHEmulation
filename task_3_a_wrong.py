@@ -22,7 +22,7 @@ def vqc_fit(n_qubits, n_epochs):
     C = VariationalParameter("C")
     
     block = chain(RX(0, np.sqrt(k) * t + phi))
-    obs = C*np.exp(-d*t/2) * Z(0)
+    obs = C*Z(0)
         
     circuit = QuantumCircuit(1, block)
     model = QuantumModel(circuit, observable = obs)
