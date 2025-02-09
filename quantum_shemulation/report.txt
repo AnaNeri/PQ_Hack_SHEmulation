@@ -40,4 +40,6 @@ Similar to the previous one, we obtained a curve very close to the expected beha
 
 *** Part 4 ***
 
+This time, we have two feature variables. We tried some combination of rotations on two qubits. We didn't find the expected solution (of the form sin(omega1x)sin(omega2y)), probably because of the poor choice of Ansatz that did not offer the required flexibility.
+
 *** Part 5 ***
