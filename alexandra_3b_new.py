@@ -27,7 +27,7 @@ dx0 = 1.2  # x'(0) = 1.2
 
 def vqc_fit():
 
-    n_qubits = 1
+    n_qubits = 2
     
     t = FeatureParameter("t")
     B0 = VariationalParameter("B0")
@@ -37,11 +37,14 @@ def vqc_fit():
     phi2 = VariationalParameter("phi2")
     phi3 = VariationalParameter("phi3")
     C = VariationalParameter("C")
+    C2 = VariationalParameter("C2")
     g = VariationalParameter("g")
+    p = VariationalParameter("p")
+    v = VariationalParameter("v")
     theta = VariationalParameter("theta")
     
-    block = chain(RX(0, B0 * t+phi1)*RY(0, B1 * t+phi2)*RZ(0, B1 * t+phi3))
-    obs = C*Z(0)+g*I(0)
+    block = chain(RZ(1, v)*CRZ(0, 1, p)*RX(0, B0 * t+phi1)*RY(0, B1 * t+phi2)*RZ(0, B1 * t+phi3))
+    obs = C*Z(0)+C2*Z(1)+g*I(0)
         
     circuit = QuantumCircuit(n_qubits, block)
     model = QuantumModel(circuit, observable = obs)
@@ -60,7 +63,7 @@ def vqc_fit():
         loss.backward()
         optimizer.step()
         y_pred = model.expectation({"t": t_range}).squeeze().detach()
-
+    print(loss)
     return model, y_pred
     
 #Once again, we need to adapt the loss function to enforce the diff. eq.
