@@ -6,6 +6,7 @@ import numpy as np
 from scipy.optimize import curve_fit, minimize
 import torch
 import csv
+from copy import deepcopy
 
 seed = 55
 torch.manual_seed(seed)
@@ -19,15 +20,23 @@ def vqc_fit():
     n_qubits = 2
     
     t = FeatureParameter("t")
+    # r = FeatureParameter("r")
+    '''
+    B0 = VariationalParameter("B0")
+    B1 = VariationalParameter("B1")
+    B2 = VariationalParameter("B2")
+    phi0 = VariationalParameter("phi0")
+    phi1 = VariationalParameter("phi1")
+    phi2 = VariationalParameter("phi2")'''
     C = VariationalParameter("C")
     C2 = VariationalParameter("C2")
     
     # block = chain(RX(0, B0 * t+phi0)*RY(0, B1 * t+phi1)*RZ(0, B1 * t+phi2))
     fm = kron(RX(i, t) for i in range(n_qubits))
-    block = fm*hea(n_qubits, depth=2)
+    block = fm*hea(n_qubits, depth=2)#*kron(RX(i, r) for i in range(n_qubits))
     obs = C*Z(0) # + C2*I(0)
         
-    circuit = QuantumCircuit(n_qubits, block)
+    circuit = QuantumCircuit(n_qubits)
     model = QuantumModel(circuit, observable = obs)
 
     n_epochs = 500
@@ -36,7 +45,7 @@ def vqc_fit():
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     for epoch in range(n_epochs):
         optimizer.zero_grad()
-        loss = loss_fn(inputs = t_range, model = model)
+        loss = loss_fn(model, t_range, x0, k)
         loss.backward()
         optimizer.step()
         y_pred = model.expectation({"t": t_range}).squeeze().detach()
@@ -48,45 +57,21 @@ def vqc_fit():
 
 t_range = torch.linspace(0, 1, 100)  # range of t values
 
-def loss_fn(model, inputs):
-    """Loss function encoding the problem to solve."""
-    # Equation loss
-    model_output = model(inputs)
-    deriv_model = calc_deriv(model_output, inputs)
-    deriv_exact = dfdx_equation(inputs)
-    criterion = torch.nn.MSELoss()
-    ode_loss = criterion(deriv_model, deriv_exact)
-
-    # Boundary loss, f(0) = 0
-    boundary_model = model(torch.tensor([[0.0]]))
-    boundary_exact = torch.tensor([[0.0]])
-    boundary_loss = criterion(boundary_model, boundary_exact)
-
-    return ode_loss + boundary_loss
-
-def calc_deriv(outputs: torch.Tensor, inputs: torch.Tensor) -> torch.Tensor:
-    """Compute a derivative of model that learns f(x), computes df/dx using torch.autograd."""
-    grad = torch.autograd.grad(
-        outputs=outputs,
-        inputs=inputs,
-        grad_outputs = torch.ones_like(inputs),
-        create_graph = True,
-        retain_graph = True,
-    )[0]
-    return grad
-
-def dfdx_equation(x: torch.Tensor) -> torch.Tensor:
-    """Derivative as per the equation."""
-    return k*x
-
-def loss_fn_old(model, t_range, x0, k):
+def loss_fn(model, t_range, x0, k):
     
     t_range.requires_grad = True
     x_t = model.expectation({"t": t_range}).squeeze()
     
     # dx/dt
     dx_dt = torch.autograd.grad(x_t.sum(), t_range, create_graph=True)[0]
-    dx_dt5 = torch.autograd.grad(x_t[5], t_range, create_graph=True)[0]
+    print("dxdt", dx_dt)
+    dx_dts = []
+    for t in t_range:
+        for alpha in [np.pi/2, -np.pi/2]:
+            exp = model.expectation({"t": t, "r": t + alpha})
+            print("exp", exp)
+            input()
+
     
     # Check if learned derivative is behaving according to diff eq.
     residual = dx_dt - k * x_t
