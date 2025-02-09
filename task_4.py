@@ -139,13 +139,15 @@ def data_from_file(path):
     ys = torch.Tensor(ys)
     return xs, ys
 
-xx, yy = data_from_file("datasets/dataset_4_test.txt")
-print('---',xx, yy)
+#xx, yy = data_from_file("datasets/dataset_4_test.txt") 3 this was not working
+
+x_range = torch.linspace(-1, 1, 200)  # range of t values
+y_range = torch.linspace(-1, 1, 200)  # range of t values
 
 n_qubits = 4
-model, uu = vqc_fit(n_qubits, 200, xx, yy, xmin, xmax, k)
+model, uu = vqc_fit(n_qubits, 200, x_range, y_range, xmin, xmax, k)
 if show:
-    plot_2d(xx,yy, uu)
-    plot_3d(xx,yy, uu)
+    plot_2d(x_range,y_range, uu)
+    plot_3d(x_range,y_range, uu)
 vparams = model.vparams
-write_csv(xx, yy, uu, "solution_4.csv")
+write_csv(x_range.detach(), y_range.detach(), uu.detach(), "solution_4.csv") #?? not working
