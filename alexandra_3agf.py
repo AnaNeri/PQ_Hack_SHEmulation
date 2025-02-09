@@ -1,7 +1,6 @@
 from qadence import (feature_map, hea, Z, QuantumModel, add, QuantumCircuit, 
                      kron, FeatureParameter, RX, RZ, VariationalParameter, RY,
-                     chain, CNOT, X, Y, CRX, CRZ, I, BasisSet, identity_initialized_ansatz,
-                     ala, rydberg_hea_layer)
+                     chain, CNOT, X, Y, CRX, CRZ, I)
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit, minimize
@@ -16,61 +15,69 @@ k = 2.3
 x0 = 1.0  # x(0) = 1.0
 dx0 = 1.2  # x'(0) = 1.2
 
-def vqc_fit():
-    '''
-    n_qubits = 1
-    t = FeatureParameter("t")
-    fm = feature_map(n_qubits, param = "t")#, fm_type=BasisSet.FOURIER)
-
-    ansatz = chain(RX(0, k**0.5 * t + VariationalParameter(f"B{2}")))
-
+def vqc_fit(n_qubits, n_epochs):
     
-    As = [VariationalParameter(f"A{i}") for i in range(n_qubits)]
-    obs = VariationalParameter("C")*Z(0) #add(As[i]*Z(i) for i in range(n_qubits)) + VariationalParameter(f"B")*I(0)
-    block =  chain(ansatz for i in range(1))
-        
-    circuit = QuantumCircuit(n_qubits, block)
-    model = QuantumModel(circuit, observable = obs)
-    '''
     t = FeatureParameter("t")
-    phi = VariationalParameter("phi")
+    B0 = VariationalParameter("B0")
+    B1 = VariationalParameter("B1")
+    B2 = VariationalParameter("B2")
+    phi1 = VariationalParameter("phi1")
+    phi2 = VariationalParameter("phi2")
+    phi3 = VariationalParameter("phi3")
     C = VariationalParameter("C")
     
-    block = chain(RX(0, np.sqrt(k) * t + phi))
+    block = chain(RX(0, B0 * t + phi1)* RZ(0, B1 * t+ phi2)*RY(0, B2 * t + phi3) )
     obs = C*Z(0)
         
     circuit = QuantumCircuit(1, block)
     model = QuantumModel(circuit, observable = obs)
 
-    #for param in model.parameters():
-    #    torch.nn.init.uniform_(param, -0.1, 0.1)
 
-    criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr = 1e-4)
 
-    n_epochs = 100
-    losses = []
-    for epoch in range(n_epochs):
-        optimizer.zero_grad()
-        loss = loss_fn(model, t_range, x0, dx0, k)
-        loss.backward()
-        optimizer.step()
-        y_pred = model.expectation({"t": t_range}).squeeze().detach()
-        losses.append(loss.detach().numpy())
-    print(losses)
-    bplot(list(range(n_epochs)), losses)
+    # criterion = torch.nn.MSELoss()
+    xi =  [np.random.uniform(0, 3) for i in range(7)]
+
+    res = minimize(loss_fn, x0 = xi, args = (model, t_range, x0, dx0, k), method='Powell')
+    model.reset_vparams(res.x)
+
+    y_pred = model.expectation({"x": t_range}).squeeze().detach()
+
     return model, y_pred
     
 #Since we don't have the training data, we need to define a different loss function based on the diff equation
 
 t_range = torch.linspace(0, 10, 100)  # range of t values
 
-def loss_fn(model, t_range, x0, dx0, k):
+def loss_fn(params, *args):
+    model, t_range, xi, dx0, k = args
+    t_range.requires_grad = True
+    x_t = model.expectation({"t": t_range}).squeeze()
+    
+    # dx/dt
+    print(x_t)
+    dx_dt = torch.autograd.grad(x_t.sum(), t_range, create_graph=True)[0]
+    
+    # d^2x/dt^2
+    d2x_dt2 = torch.autograd.grad(dx_dt.sum(), t_range, create_graph=True)[0]
+    
+    # Check if learned derivative is behaving according to diff eq.
+    residual = d2x_dt2 + k * x_t
+    
+    # Enforce boundary conditions
+    bc1 = x_t[0] - x0  # x(0) = 1.0
+    bc2 = dx_dt[0] - dx0  # x'(0) = 1.2
+    
+    # Total loss: MSE of residual and boundary conditions
+    loss = torch.mean(residual**2) + bc1**2 + bc2**2
+    return loss
+
+def loss_fn_old(model, t_range, x0, dx0, k):
     
     t_range.requires_grad = True
     x_t = model.expectation({"t": t_range}).squeeze()
     
     # dx/dt
+    print(x_t)
     dx_dt = torch.autograd.grad(x_t.sum(), t_range, create_graph=True)[0]
     
     # d^2x/dt^2
@@ -96,14 +103,10 @@ def plot(t_range, y_pred):
     plt.legend()
     plt.show()
 
-def bplot(x, y):
-    plt.scatter(x, y)
-    plt.show()
-
 show = True
 
-
-model, y_pred = vqc_fit()
+n_qubits = 1
+model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
 if show:
     plot(t_range, y_pred)
 

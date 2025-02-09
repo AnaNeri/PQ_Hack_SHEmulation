@@ -1,11 +1,13 @@
 from qadence import (feature_map, hea, Z, QuantumModel, add, QuantumCircuit, 
                      kron, FeatureParameter, RX, RZ, VariationalParameter, RY,
-                     chain, CNOT, X, Y, CRX, CRZ, I)
+                     chain, CNOT, X, Y, CRX, CRZ, I, identity_initialized_ansatz, 
+                     BasisSet, ObservableConfig, observable_from_config)
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit, minimize
 import torch
 from sympy import exp
+import csv
 
 #Constant and boundary conditions
 k = 3.3
@@ -13,21 +15,29 @@ d = 0.8 #damping
 x0 = 1.0  # x(0) = 1.0
 dx0 = 1.2  # x'(0) = 1.2
 
-def vqc_fit(n_qubits, n_epochs):
+def vqc_fit():
+
+    n_qubits = 2
     
     t = FeatureParameter("t")
-    phi = VariationalParameter("phi")
+    B0 = VariationalParameter("B0")
+    B1 = VariationalParameter("B1")
+    B2 = VariationalParameter("B2")
+    phi1 = VariationalParameter("phi1")
+    phi2 = VariationalParameter("phi2")
+    phi3 = VariationalParameter("phi3")
     C = VariationalParameter("C")
     
-    block = chain(RX(0, np.sqrt(k-(d/2)**2) * t + phi))
-    obs = C*exp(-t*d/2) * Z(0)
+    block = chain(RX(0, B0 * t + phi1)* RZ(0, B1 * t+ phi2)*RY(0, B2 * t + phi3) )
+    obs = C*Z(0)
         
     circuit = QuantumCircuit(1, block)
     model = QuantumModel(circuit, observable = obs)
 
     criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr = 0.1)
+    optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3)
 
+    n_epochs = 500
     for epoch in range(n_epochs):
         optimizer.zero_grad()
         loss = loss_fn(model, t_range, x0, dx0, k, d)
@@ -63,6 +73,12 @@ def loss_fn(model, t_range, x0, dx0, k, d):
     loss = torch.mean(residual**2) + bc1**2 + bc2**2
     return loss
 
+def write_csv(xx, yy, filename):
+    with open(filename, mode="w", newline="") as file:
+        writer = csv.writer(file)
+        for x, y in zip(xx, yy):
+            writer.writerow([x.item(), y.item()])
+
 def plot(t_range, y_pred):
     plt.plot(t_range.detach().numpy(), y_pred, label = "Prediction")
     plt.xlabel("t")
@@ -70,12 +86,18 @@ def plot(t_range, y_pred):
     plt.legend()
     plt.show()
 
-quantum = True
+def data_from_file(path):
+    with open(path, "r") as file:
+        xs = [float(line) for line in file]
+    xs = torch.Tensor(xs)
+    return xs
+
 show = True
 
-if quantum: 
-    n_qubits = 1
-    model, y_pred = vqc_fit(n_qubits, n_epochs = 100)
-    if show:
-        plot(t_range, y_pred)
-    vparams = model.vparams
+model, y_pred = vqc_fit()
+if show:
+    plot(t_range, y_pred)
+
+ts = data_from_file("datasets/dataset_3_test.txt")
+ypred = model.expectation(values = {"t": ts})
+write_csv(ts.detach(), ypred.detach(), "solution_3_b.csv")

@@ -27,6 +27,8 @@ def vqc_fit(n_qubits, n_epochs):
     circuit = QuantumCircuit(1, block)
     model = QuantumModel(circuit, observable = obs)
 
+
+
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr = 0.1)
 
